@@ -1,476 +1,1018 @@
 ```python
-# pip install python-barcode
-# pip install "python-barcode[images]"
 import pandas as pd
 import numpy as np
-import pyodbc
-import openpyxl
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
-from pathlib import Path
-from openpyxl import load_workbook, styles, formatting
-import sys
-import os
+import datetime as dt
+import re
+from dateutil.relativedelta import relativedelta
+from string import ascii_uppercase
 ```
 
 
 ```python
-# import barcode
-# from barcode.writer import ImageWriter
-# code='725272730706'
-# sample_barcode=barcode.get('upca',code,writer=ImageWriter())
-# generated_filename=sample_barcode.save('uuu')
-# print('upc-a'+generated_filename)
+# Loading the raw data. Specified a column name as numbers in object to see easily.
+df=pd.read_excel("/Users/suinkim/Downloads/TEST.xlsx",usecols=list(range(1,25,+1)),header=None)
 ```
 
 
 ```python
+df3 = df.fillna("")
+df3
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>8</th>
+      <th>9</th>
+      <th>10</th>
+      <th>...</th>
+      <th>15</th>
+      <th>16</th>
+      <th>17</th>
+      <th>18</th>
+      <th>19</th>
+      <th>20</th>
+      <th>21</th>
+      <th>22</th>
+      <th>23</th>
+      <th>24</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td></td>
+      <td></td>
+      <td>YEAR 1</td>
+      <td></td>
+      <td></td>
+      <td>FULL YEAR</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>YEAR 3</td>
+      <td></td>
+      <td></td>
+      <td>FULL YEAR</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric</td>
+      <td></td>
+      <td></td>
+      <td>Weight</td>
+      <td>Times</td>
+      <td>outcome</td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td>Times</td>
+      <td>outcome</td>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric</td>
+      <td></td>
+      <td></td>
+      <td>Weight</td>
+      <td>Times</td>
+      <td>outcome</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 1</td>
+      <td></td>
+      <td></td>
+      <td>100</td>
+      <td>1</td>
+      <td>Y</td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td>10</td>
+      <td>Y</td>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 1</td>
+      <td></td>
+      <td></td>
+      <td>21213</td>
+      <td>50</td>
+      <td>Y</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 2</td>
+      <td></td>
+      <td></td>
+      <td>200</td>
+      <td>2</td>
+      <td>N</td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td>20</td>
+      <td>N</td>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 2</td>
+      <td></td>
+      <td></td>
+      <td>55567</td>
+      <td>60</td>
+      <td>N</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 3</td>
+      <td></td>
+      <td></td>
+      <td>300</td>
+      <td>3</td>
+      <td>Y</td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td>30</td>
+      <td>Y</td>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 3</td>
+      <td></td>
+      <td></td>
+      <td>89890</td>
+      <td>70</td>
+      <td>Y</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 4</td>
+      <td></td>
+      <td></td>
+      <td>400</td>
+      <td>4</td>
+      <td>N</td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td>40</td>
+      <td>N</td>
+      <td></td>
+      <td></td>
+      <td>Fincial Metric 4</td>
+      <td></td>
+      <td></td>
+      <td>40524</td>
+      <td>80</td>
+      <td>N</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td></td>
+      <td>Comment</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td></td>
+      <td></td>
+      <td>Please review something</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Score</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td></td>
+      <td>Result</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>A-2</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td></td>
+      <td></td>
+      <td>Passed</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>...</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<p>17 rows × 24 columns</p>
+</div>
+
+
+
+
+```python
+df2=df.rename(columns={3:'Comment',19:'Score'})
+```
+
+
+```python
+# Filter only relevent data
+df2=df2[["Comment","Score"]]
+```
+
+
+```python
+df2=df2[11:]
+```
+
+
+```python
+# Getting raw data as a set of list since columns and raw are unstructured 
+lst = df2["Comment"].tolist() + df2["Score"].tolist()
+```
+
+
+```python
+# Filtering NAN out
+cleanedlst=[x for x in lst if str(x) != 'nan']
+```
+
+
+```python
+# Setting columns
+col_names=cleanedlst[::2]
+```
+
+
+```python
+# Setting values
+val = cleanedlst[1::2]
+```
+
+
+```python
+# Expressing in DataFrame
+data={
+    'Comment':val[col_names.index('Comment')],
+    'Result':val[col_names.index('Result')],
+    "Score":val[col_names.index("Score")]
+}
+```
+
+
+```python
+df2=pd.DataFrame(data,index=[0])
+```
+
+
+```python
+# Arrange an ID to join with Years table. 
+df2["id"]='1'
+```
+
+
+```python
+df2
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Comment</th>
+      <th>Result</th>
+      <th>Score</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+# Full Year 1
+#df = df.fillna("")
+df.dropna(how='all')
+df_year1=df.loc[4:8,3:8]
+df_year1=df_year1[[3,6,7,8]]
+df_year1.columns=df_year1.iloc[0]
+df_year1["Year"]='1'
+df_year1=df_year1[["Year","Fincial Metric","Weight","Times","outcome"]]
+df_year1=df_year1[1:]
+```
+
+
+```python
+# Full Year 2
+df_year2=df.loc[4:8,10:16]
+df_year2=df_year2[[11,14,15,16]]
+df_year2.columns=df_year2.iloc[0]
+df_year2["Year"]='2'
+df_year2=df_year2[["Year","Fincial Metric","Weight","Times","outcome"]]
+df_year2=df_year2[1:]
+```
+
+
+```python
+# Full Year 3
+df_year3=df.loc[4:8,18:24]
+df_year3=df_year3[[19,22,23,24]]
+df_year3.columns=df_year3.iloc[0]
+df_year3["Year"]='3'
+df_year3=df_year3[["Year","Fincial Metric","Weight","Times","outcome"]]
+df_year3=df_year3[1:]
+```
+
+
+```python
+# Concat year1, year2 and year3. Can express year1,year2,year3 seperately as your favor.
+df_final=pd.concat([df_year1,df_year2,df_year3],ignore_index=True)
+```
+
+
+```python
+# Arrange an ID to join with other table. This can be also a sheet number.
+df_final["id"]='1'
+```
+
+
+```python
+df_final
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>4</th>
+      <th>Year</th>
+      <th>Fincial Metric</th>
+      <th>Weight</th>
+      <th>Times</th>
+      <th>outcome</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>Fincial Metric 1</td>
+      <td>100</td>
+      <td>1</td>
+      <td>Y</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>Fincial Metric 2</td>
+      <td>200</td>
+      <td>2</td>
+      <td>N</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>Fincial Metric 3</td>
+      <td>300</td>
+      <td>3</td>
+      <td>Y</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>Fincial Metric 4</td>
+      <td>400</td>
+      <td>4</td>
+      <td>N</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2</td>
+      <td>Fincial Metric 1</td>
+      <td>6565</td>
+      <td>10</td>
+      <td>Y</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2</td>
+      <td>Fincial Metric 2</td>
+      <td>3900</td>
+      <td>20</td>
+      <td>N</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2</td>
+      <td>Fincial Metric 3</td>
+      <td>5621</td>
+      <td>30</td>
+      <td>Y</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2</td>
+      <td>Fincial Metric 4</td>
+      <td>6049</td>
+      <td>40</td>
+      <td>N</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>3</td>
+      <td>Fincial Metric 1</td>
+      <td>21213</td>
+      <td>50</td>
+      <td>Y</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>3</td>
+      <td>Fincial Metric 2</td>
+      <td>55567</td>
+      <td>60</td>
+      <td>N</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>3</td>
+      <td>Fincial Metric 3</td>
+      <td>89890</td>
+      <td>70</td>
+      <td>Y</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>3</td>
+      <td>Fincial Metric 4</td>
+      <td>40524</td>
+      <td>80</td>
+      <td>N</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+# Create a new table by merging a common table, ID.
+df_final=df_final.merge(df2,left_on="id", right_on='id')
+```
+
+
+```python
+# Setting Primary Key
+df_final["index"]=range(1,len(df_final)+1)
+```
+
+
+```python
+df_final
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Year</th>
+      <th>Fincial Metric</th>
+      <th>Weight</th>
+      <th>Times</th>
+      <th>outcome</th>
+      <th>id</th>
+      <th>Comment</th>
+      <th>Result</th>
+      <th>Score</th>
+      <th>index</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>Fincial Metric 1</td>
+      <td>100</td>
+      <td>1</td>
+      <td>Y</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>Fincial Metric 2</td>
+      <td>200</td>
+      <td>2</td>
+      <td>N</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>Fincial Metric 3</td>
+      <td>300</td>
+      <td>3</td>
+      <td>Y</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>Fincial Metric 4</td>
+      <td>400</td>
+      <td>4</td>
+      <td>N</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2</td>
+      <td>Fincial Metric 1</td>
+      <td>6565</td>
+      <td>10</td>
+      <td>Y</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2</td>
+      <td>Fincial Metric 2</td>
+      <td>3900</td>
+      <td>20</td>
+      <td>N</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2</td>
+      <td>Fincial Metric 3</td>
+      <td>5621</td>
+      <td>30</td>
+      <td>Y</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2</td>
+      <td>Fincial Metric 4</td>
+      <td>6049</td>
+      <td>40</td>
+      <td>N</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>3</td>
+      <td>Fincial Metric 1</td>
+      <td>21213</td>
+      <td>50</td>
+      <td>Y</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>3</td>
+      <td>Fincial Metric 2</td>
+      <td>55567</td>
+      <td>60</td>
+      <td>N</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>3</td>
+      <td>Fincial Metric 3</td>
+      <td>89890</td>
+      <td>70</td>
+      <td>Y</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>3</td>
+      <td>Fincial Metric 4</td>
+      <td>40524</td>
+      <td>80</td>
+      <td>N</td>
+      <td>1</td>
+      <td>Please review something</td>
+      <td>Passed</td>
+      <td>A-2</td>
+      <td>12</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+# Connect to SQL 
 server = '10.1.3.25' 
-database = 'KIRA' 
-username = 'kiradba' 
-password = 'Kiss!234!' 
+database = '**' 
+username = '**' 
+password = '**' 
 connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
 engine = create_engine(connection_url)
-print("Connection Established:")
-```
-
-    Connection Established:
-    
-
-
-```python
-df=pd.read_sql('''
-WITH T1 as (
-SELECT material, description, ip, ct, nsp, srp, upc
-FROM [ivy.mm.dim.mtrl]
-WHERE ivykiss = 'X' and ms in ('01','41','91','N1','D1'))
-SELECT *
-FROM T1
-WHERE nsp is not null
-''',con=engine)
-df=df.astype({"material":"str", "description":"str","ip":"int","ct":"int","nsp":"float","srp":"float","upc":"str"}).sort_values(by=["upc"],ascending=True)
+print("connected")
 ```
 
 
 ```python
-df.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>material</th>
-      <th>description</th>
-      <th>ip</th>
-      <th>ct</th>
-      <th>nsp</th>
-      <th>srp</th>
-      <th>upc</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>1511</th>
-      <td>ALL02</td>
-      <td>RK Auto Lip Liner-Brown</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002738</td>
-    </tr>
-    <tr>
-      <th>1506</th>
-      <td>ALL05</td>
-      <td>RK Auto Lip Liner-Cappuccino</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002769</td>
-    </tr>
-    <tr>
-      <th>1507</th>
-      <td>ALL06</td>
-      <td>RK Auto Lip Liner-Cocoa</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002776</td>
-    </tr>
-    <tr>
-      <th>1508</th>
-      <td>ALL07</td>
-      <td>RK Auto Lip Liner-Black</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002783</td>
-    </tr>
-    <tr>
-      <th>1509</th>
-      <td>ALL11</td>
-      <td>RK Auto Lip Liner-Plum</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002820</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-df.tail()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>material</th>
-      <th>description</th>
-      <th>ip</th>
-      <th>ct</th>
-      <th>nsp</th>
-      <th>srp</th>
-      <th>upc</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>1385</th>
-      <td>KID03Y1</td>
-      <td>IEK 3D Collection Double 03</td>
-      <td>3</td>
-      <td>288</td>
-      <td>2.0</td>
-      <td>3.99</td>
-      <td>731509870169</td>
-    </tr>
-    <tr>
-      <th>1751</th>
-      <td>FCT01</td>
-      <td>KS Gel Fantasy Toenails- This is Classic</td>
-      <td>2</td>
-      <td>36</td>
-      <td>4.8</td>
-      <td>7.99</td>
-      <td>731509876055</td>
-    </tr>
-    <tr>
-      <th>1330</th>
-      <td>KNAR02</td>
-      <td>KS Nail Art Rhinestones - Multi Shapes</td>
-      <td>2</td>
-      <td>36</td>
-      <td>4.5</td>
-      <td>9.00</td>
-      <td>731509877960</td>
-    </tr>
-    <tr>
-      <th>1473</th>
-      <td>BN05</td>
-      <td>KS Bare-But-Better Nails - Berry Nude</td>
-      <td>2</td>
-      <td>36</td>
-      <td>4.5</td>
-      <td>8.99</td>
-      <td>731509880106</td>
-    </tr>
-    <tr>
-      <th>2881</th>
-      <td>LGC01</td>
-      <td>KC Temp Blend-away - Jet Black</td>
-      <td>3</td>
-      <td>120</td>
-      <td>2.5</td>
-      <td>4.99</td>
-      <td>731509999952</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-df.info()
-```
-
-    <class 'pandas.core.frame.DataFrame'>
-    Int64Index: 2935 entries, 1511 to 2881
-    Data columns (total 7 columns):
-     #   Column       Non-Null Count  Dtype  
-    ---  ------       --------------  -----  
-     0   material     2935 non-null   object 
-     1   description  2935 non-null   object 
-     2   ip           2935 non-null   int32  
-     3   ct           2935 non-null   int32  
-     4   nsp          2935 non-null   float64
-     5   srp          2916 non-null   float64
-     6   upc          2935 non-null   object 
-    dtypes: float64(2), int32(2), object(3)
-    memory usage: 160.5+ KB
-    
-
-
-```python
-# convert it as excel file.
-df.to_excel(r"Y:\OM ONLY_Shared Documents\5 Reports with Power Query\Reports\IVYKISS UPC Report\2. UPC_LIST\UPC_LIST.xlsx",index=False)
-```
-
-
-```python
-previous_df=pd.read_excel(r"Y:\OM ONLY_Shared Documents\5 Reports with Power Query\Reports\IVYKISS UPC Report\2. UPC_LIST\UPC_LIST_091222.xlsx")
-previous_df.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>material</th>
-      <th>description</th>
-      <th>ip</th>
-      <th>ct</th>
-      <th>nsp</th>
-      <th>srp</th>
-      <th>upc</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>ALL02</td>
-      <td>RK Auto Lip Liner-Brown</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002738</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>ALL05</td>
-      <td>RK Auto Lip Liner-Cappuccino</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002769</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>ALL06</td>
-      <td>RK Auto Lip Liner-Cocoa</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002776</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>ALL07</td>
-      <td>RK Auto Lip Liner-Black</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002783</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>ALL11</td>
-      <td>RK Auto Lip Liner-Plum</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002820</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-thisweek_df=pd.read_excel(r"Y:\OM ONLY_Shared Documents\5 Reports with Power Query\Reports\IVYKISS UPC Report\2. UPC_LIST\UPC_LIST_091922.xlsx")
-thisweek_df.head()
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>material</th>
-      <th>description</th>
-      <th>ip</th>
-      <th>ct</th>
-      <th>nsp</th>
-      <th>srp</th>
-      <th>upc</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>ALL02</td>
-      <td>RK Auto Lip Liner-Brown</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002738</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>ALL05</td>
-      <td>RK Auto Lip Liner-Cappuccino</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002769</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>ALL06</td>
-      <td>RK Auto Lip Liner-Cocoa</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002776</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>ALL07</td>
-      <td>RK Auto Lip Liner-Black</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002783</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>ALL11</td>
-      <td>RK Auto Lip Liner-Plum</td>
-      <td>12</td>
-      <td>288</td>
-      <td>0.55</td>
-      <td>0.99</td>
-      <td>649674002820</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-difference=list(set(previous_df["material"]) - set(thisweek_df["material"])) # a way to inspect the differnces in material between previous week and this week.
-print('The Different Material List between last & this week: {}'.format(difference))
-```
-
-    The Different Material List between last & this week: ['KEG100H', 'KEG025F', 'KEG100C', 'KEG100D', 'KEG025E', 'KEG100L', 'KEG100E']
-    
-
-
-```python
-os.getcwd() # currently directory location
-newpath = r'Y:\OM ONLY_Shared Documents\5 Reports with Power Query\Reports\IVYKISS UPC Report\3. Barcode_by_Python'
-os.chdir(newpath) # save it as current directory.
-```
-
-
-```python
-import barcode
-from barcode import UPCA
-from barcode.writer import ImageWriter
-for i,y in zip(df["material"], df["upc"]):
-    with open(str(y) + ".png", "wb") as f:
-        UPCA(str(y), writer=ImageWriter()).write(f)
+# Transfer into Database
+df_final.to_sql('fact.ETL', engine, schema = "dbo", if_exists='append', index=False, chunksize=10000)
+print("\n Successfully Transported")
 ```
